@@ -95,10 +95,21 @@ int main(int argc, char *argv[])
 	try
 	{
 		display disObj("opengl", 800, 600);
-		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT);
-		disObj.update();
-		SDL_Delay(3000);
+
+		SDL_Event winEvent;
+		bool quit = false;
+		while(!quit)
+		{
+			while(SDL_PollEvent(&winEvent))
+			{
+				if(winEvent.type == SDL_QUIT) quit = true;
+			}
+
+			/*** Drawing ***/
+			glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+			glClear(GL_COLOR_BUFFER_BIT);
+			disObj.update();
+		}
 	}
 	catch(std::exception& e)
 	{
