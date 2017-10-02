@@ -69,7 +69,7 @@ display::display(const char* title, const int w, const int h) : window(nullptr),
 	std::cout << "GL version: " << glGetString(GL_VERSION) << std::endl;
 
 	/*** Load shaders ***/
-	if(!loadShaders("vertex1.glsl", "fragment1.glsl"))
+	if(!loadShaders("vertex.glsl", "fragment.glsl"))
 	{
 		exception = "ERROR: Failed to load shaders";
 		throw *this;
