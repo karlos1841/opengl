@@ -1,16 +1,6 @@
 #include "main.hpp"
 
-std::ostream& operator<<(std::ostream& out, const std::vector<GLchar>& v)
-{
-	for(unsigned int i = 0; i < v.size(); i++)
-	{
-		out << v[i];
-	}
-
-	return out;
-}
-
-display::display(const char* title, const int w, const int h) : window(nullptr), glcontext(nullptr)
+display::display(const char* title, const int w, const int h) : window(nullptr), glcontext(nullptr), vertexShader(0), fragmentShader(0), shaderProgram(0)
 {
 	if(SDL_Init(SDL_INIT_EVERYTHING) != 0)
 	{
@@ -69,9 +59,8 @@ display::display(const char* title, const int w, const int h) : window(nullptr),
 	std::cout << "GL version: " << glGetString(GL_VERSION) << std::endl;
 
 	/*** Load shaders ***/
-	if(!loadShaders("vertex.glsl", "fragment.glsl"))
+	if(loadShaders("vertex.glsl", "fragment.glsl") != 0)
 	{
-		exception = "ERROR: Failed to load shaders";
 		throw *this;
 	}
 }
@@ -79,6 +68,9 @@ display::display(const char* title, const int w, const int h) : window(nullptr),
 display::~display()
 {
 	std::cout << "Cleaning up resources" << std::endl;
+	if(shaderProgram != 0) glDeleteProgram(shaderProgram);
+	if(fragmentShader != 0) glDeleteShader(fragmentShader);
+	if(vertexShader != 0) glDeleteShader(vertexShader);
 	if(glcontext != nullptr) SDL_GL_DeleteContext(glcontext);
 	if(window != nullptr) SDL_DestroyWindow(window);
 	SDL_Quit();
@@ -95,7 +87,8 @@ int display::readFile(std::string& fileContent, const char* filePath)
 	file.open(filePath, std::fstream::in);
 	if(!file.is_open())
 	{
-		std::cout << "Could not open " << filePath << std::endl;
+		exception = "ERROR: Could not open ";
+		exception += filePath;
 		return 1;
 	}
 
@@ -109,17 +102,17 @@ int display::readFile(std::string& fileContent, const char* filePath)
 	return 0;
 }
 
-GLuint display::loadShaders(const char* vertexPath, const char* fragmentPath)
+int display::loadShaders(const char* vertexPath, const char* fragmentPath)
 {
-	GLuint errorCode = 0;
+	/*** Load from file and compile vertex shader ***/
 	std::string vertexCode;
 	if(readFile(vertexCode, vertexPath) != 0)
 	{
-		return errorCode;
+		return 1;
 	}
 	const char* vertexCodeCstr = vertexCode.c_str();
 
-	GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
+	vertexShader = glCreateShader(GL_VERTEX_SHADER);
 	glShaderSource(vertexShader, 1, &vertexCodeCstr, 0);
 	glCompileShader(vertexShader);
 
@@ -131,21 +124,21 @@ GLuint display::loadShaders(const char* vertexPath, const char* fragmentPath)
 		glGetShaderiv(vertexShader, GL_INFO_LOG_LENGTH, &maxLength);
 		std::vector<GLchar> infoLog(maxLength);
 		glGetShaderInfoLog(vertexShader, maxLength, &maxLength, &infoLog[0]);
-		glDeleteShader(vertexShader);
-
 		std::cout << infoLog << std::endl;
-		std::cout << "ERROR: Failed to compile vertex shader" << std::endl;
-		return errorCode;
+
+		exception = "ERROR: Failed to compile vertex shader";
+		return 1;
 	}
 
+	/*** Load from file and compile fragment shader ***/
 	std::string fragmentCode;
 	if(readFile(fragmentCode, fragmentPath) != 0)
 	{
-		return errorCode;
+		return 1;
 	}
 	const char* fragmentCodeCstr = fragmentCode.c_str();
 
-	GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+	fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
 	glShaderSource(fragmentShader, 1, &fragmentCodeCstr, 0);
 	glCompileShader(fragmentShader);
 
@@ -156,16 +149,14 @@ GLuint display::loadShaders(const char* vertexPath, const char* fragmentPath)
 		glGetShaderiv(fragmentShader, GL_INFO_LOG_LENGTH, &maxLength);
 		std::vector<GLchar> infoLog(maxLength);
 		glGetShaderInfoLog(fragmentShader, maxLength, &maxLength, &infoLog[0]);
-		glDeleteShader(fragmentShader);
-		glDeleteShader(vertexShader);
-
 		std::cout << infoLog << std::endl;
-		std::cout << "ERROR: Failed to compile fragment shader" << std::endl;
-		return errorCode;
+
+		exception = "ERROR: Failed to compile fragment shader";
+		return 1;
 	}
 
-
-	GLuint shaderProgram = glCreateProgram();
+	/*** Link shaders into program ***/
+	shaderProgram = glCreateProgram();
 	glAttachShader(shaderProgram, vertexShader);
 	glAttachShader(shaderProgram, fragmentShader);
 	glLinkProgram(shaderProgram);
@@ -178,21 +169,27 @@ GLuint display::loadShaders(const char* vertexPath, const char* fragmentPath)
 		glGetProgramiv(shaderProgram, GL_INFO_LOG_LENGTH, &maxLength);
 		std::vector<GLchar> infoLog(maxLength);
 		glGetProgramInfoLog(shaderProgram, maxLength, &maxLength, &infoLog[0]);
-		glDeleteProgram(shaderProgram);
-		glDeleteShader(fragmentShader);
-		glDeleteShader(vertexShader);
-
 		std::cout << infoLog << std::endl;
-		std::cout << "ERROR: Failed to link shader program" << std::endl;
-		return errorCode;
+
+		exception = "ERROR: Failed to link shader program";
+		return 1;
 	}
 
 	glDetachShader(shaderProgram, fragmentShader);
 	glDetachShader(shaderProgram, vertexShader);
 
-	return shaderProgram;
+	return 0;
 }
 
+std::ostream& operator<<(std::ostream& out, const std::vector<GLchar>& v)
+{
+	for(unsigned int i = 0; i < v.size(); i++)
+	{
+		out << v[i];
+	}
+
+	return out;
+}
 
 
 
@@ -232,7 +229,7 @@ int main(int argc, char *argv[])
 	}
 	catch(std::exception& e)
 	{
-		std::cout << e.what() << std::endl;
+		std::cerr << e.what() << std::endl;
 	}
 
 	return EXIT_SUCCESS;

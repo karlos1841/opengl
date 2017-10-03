@@ -20,10 +20,13 @@ class display : public std::exception
 		void update();
 	private:
 		int readFile(std::string&, const char*);
-		GLuint loadShaders(const char*, const char*);
+		int loadShaders(const char*, const char*);
 		std::string exception;
 		SDL_Window *window;
 		SDL_GLContext glcontext;
+		GLuint vertexShader;
+		GLuint fragmentShader;
+		GLuint shaderProgram;
 };
 
 #endif
