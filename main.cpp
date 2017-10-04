@@ -142,6 +142,7 @@ int display::loadShaders(const char* vertexPath, const char* fragmentPath)
 	glShaderSource(fragmentShader, 1, &fragmentCodeCstr, 0);
 	glCompileShader(fragmentShader);
 
+	isCompiled = GL_FALSE;
 	glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &isCompiled);
 	if(isCompiled == GL_FALSE)
 	{
@@ -175,8 +176,26 @@ int display::loadShaders(const char* vertexPath, const char* fragmentPath)
 		return 1;
 	}
 
+	// Detach shaders after a successful link
 	glDetachShader(shaderProgram, fragmentShader);
 	glDetachShader(shaderProgram, vertexShader);
+
+	// Validate the program
+	glValidateProgram(shaderProgram);
+
+	GLint isValidated = GL_FALSE;
+	glGetProgramiv(shaderProgram, GL_VALIDATE_STATUS, &isValidated);
+	if(isValidated == GL_FALSE)
+	{
+		GLint maxLength = 0;
+		glGetProgramiv(shaderProgram, GL_INFO_LOG_LENGTH, &maxLength);
+		std::vector<GLchar> infoLog(maxLength);
+		glGetProgramInfoLog(shaderProgram, maxLength, &maxLength, &infoLog[0]);
+		std::cout << infoLog << std::endl;
+
+		exception = "ERROR: Failed to validate shader program";
+		return 1;
+	}
 
 	return 0;
 }
