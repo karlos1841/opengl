@@ -1,6 +1,7 @@
 #include "main.hpp"
+#include "mesh.hpp"
 
-display::display(const char* title, const int w, const int h) : window(nullptr), glcontext(nullptr), vertexShader(0), fragmentShader(0), shaderProgram(0)
+display::display(const char* title, const int w, const int h) : window(nullptr), glcontext(nullptr), shaderProgram(0)
 {
 	if(SDL_Init(SDL_INIT_EVERYTHING) != 0)
 	{
@@ -58,9 +59,16 @@ display::display(const char* title, const int w, const int h) : window(nullptr),
 	std::cout << "Vendor: " << glGetString(GL_VENDOR) << std::endl;
 	std::cout << "GL version: " << glGetString(GL_VERSION) << std::endl;
 
-	/*** Load shaders ***/
-	if(loadShaders("vertex.glsl", "fragment.glsl") != 0)
+	/*** Create shaders ***/
+	GLuint shaders[2];
+	shaders[0] = createShader(GL_VERTEX_SHADER, "vertex.glsl");
+	shaders[1] = createShader(GL_FRAGMENT_SHADER, "fragment.glsl");
+
+	/*** Link the shaders into program ***/
+	shaderProgram = createProgram(shaders, sizeof(shaders) / sizeof(shaders[0]));
+	if(shaderProgram == 0)
 	{
+		exception = "ERROR: Could not create program";
 		throw *this;
 	}
 }
@@ -69,8 +77,6 @@ display::~display()
 {
 	std::cout << "Cleaning up resources" << std::endl;
 	if(shaderProgram != 0) glDeleteProgram(shaderProgram);
-	if(fragmentShader != 0) glDeleteShader(fragmentShader);
-	if(vertexShader != 0) glDeleteShader(vertexShader);
 	if(glcontext != nullptr) SDL_GL_DeleteContext(glcontext);
 	if(window != nullptr) SDL_DestroyWindow(window);
 	SDL_Quit();
@@ -87,8 +93,7 @@ int display::readFile(std::string& fileContent, const char* filePath)
 	file.open(filePath, std::fstream::in);
 	if(!file.is_open())
 	{
-		exception = "ERROR: Could not open ";
-		exception += filePath;
+		std::cout << "Could not open " << filePath << std::endl;
 		return 1;
 	}
 
@@ -102,64 +107,67 @@ int display::readFile(std::string& fileContent, const char* filePath)
 	return 0;
 }
 
-int display::loadShaders(const char* vertexPath, const char* fragmentPath)
+GLuint display::createShader(GLenum shaderType, const char* shaderPath)
 {
-	/*** Load from file and compile vertex shader ***/
-	std::string vertexCode;
-	if(readFile(vertexCode, vertexPath) != 0)
+	std::string shaderCode;
+	if(readFile(shaderCode, shaderPath) != 0)
 	{
-		return 1;
+		return 0;
 	}
-	const char* vertexCodeCstr = vertexCode.c_str();
+	const char* shaderCodeCstr = shaderCode.c_str();
 
-	vertexShader = glCreateShader(GL_VERTEX_SHADER);
-	glShaderSource(vertexShader, 1, &vertexCodeCstr, 0);
-	glCompileShader(vertexShader);
+	GLuint shader = glCreateShader(shaderType);
+	glShaderSource(shader, 1, &shaderCodeCstr, 0);
+	glCompileShader(shader);
 
 	GLint isCompiled = GL_FALSE;
-	glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &isCompiled);
+	glGetShaderiv(shader, GL_COMPILE_STATUS, &isCompiled);
 	if(isCompiled == GL_FALSE)
 	{
 		GLint maxLength = 0;
-		glGetShaderiv(vertexShader, GL_INFO_LOG_LENGTH, &maxLength);
+		glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &maxLength);
 		std::vector<GLchar> infoLog(maxLength);
-		glGetShaderInfoLog(vertexShader, maxLength, &maxLength, &infoLog[0]);
+		glGetShaderInfoLog(shader, maxLength, &maxLength, &infoLog[0]);
 		std::cout << infoLog << std::endl;
+		std::cout << "Failed to compile " << shaderPath << std::endl;
 
-		exception = "ERROR: Failed to compile vertex shader";
-		return 1;
+		glDeleteShader(shader);
+		return 0;
 	}
 
-	/*** Load from file and compile fragment shader ***/
-	std::string fragmentCode;
-	if(readFile(fragmentCode, fragmentPath) != 0)
+	return shader;
+}
+
+GLuint display::createProgram(GLuint* shaders, size_t numOfShaders)
+{
+	/*** Check if all shaders compiled successfully ***/
+	bool areShadersReady = true;
+	for(size_t i = 0; i < numOfShaders; i++)
 	{
-		return 1;
+		if(shaders[i] == 0)
+		{
+			areShadersReady = false;
+			break;
+		}
 	}
-	const char* fragmentCodeCstr = fragmentCode.c_str();
-
-	fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-	glShaderSource(fragmentShader, 1, &fragmentCodeCstr, 0);
-	glCompileShader(fragmentShader);
-
-	isCompiled = GL_FALSE;
-	glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &isCompiled);
-	if(isCompiled == GL_FALSE)
+	if(areShadersReady == false)
 	{
-		GLint maxLength = 0;
-		glGetShaderiv(fragmentShader, GL_INFO_LOG_LENGTH, &maxLength);
-		std::vector<GLchar> infoLog(maxLength);
-		glGetShaderInfoLog(fragmentShader, maxLength, &maxLength, &infoLog[0]);
-		std::cout << infoLog << std::endl;
+		for(size_t i = 0; i < numOfShaders; i++)
+		{
+			glDeleteShader(shaders[i]);
+		}
 
-		exception = "ERROR: Failed to compile fragment shader";
-		return 1;
+		return 0;
 	}
 
-	/*** Link shaders into program ***/
-	shaderProgram = glCreateProgram();
-	glAttachShader(shaderProgram, vertexShader);
-	glAttachShader(shaderProgram, fragmentShader);
+	/*** Create the program and attach shaders ***/
+	GLuint shaderProgram = glCreateProgram();
+	for(size_t i = 0; i < numOfShaders; i++)
+	{
+		glAttachShader(shaderProgram, shaders[i]);
+	}
+
+	/*** Link the program ***/
 	glLinkProgram(shaderProgram);
 
 	GLint isLinked = GL_FALSE;
@@ -171,16 +179,25 @@ int display::loadShaders(const char* vertexPath, const char* fragmentPath)
 		std::vector<GLchar> infoLog(maxLength);
 		glGetProgramInfoLog(shaderProgram, maxLength, &maxLength, &infoLog[0]);
 		std::cout << infoLog << std::endl;
+		std::cout << "Could not link shader program" << std::endl;
 
-		exception = "ERROR: Failed to link shader program";
-		return 1;
+		glDeleteProgram(shaderProgram);
+		for(size_t i = 0; i < numOfShaders; i++)
+		{
+			glDeleteShader(shaders[i]);
+		}
+
+		return 0;
 	}
 
-	// Detach shaders after a successful link
-	glDetachShader(shaderProgram, fragmentShader);
-	glDetachShader(shaderProgram, vertexShader);
+	/*** Detach and delete shaders after a successful link ***/
+	for(size_t i = 0; i < numOfShaders; i++)
+	{
+		glDetachShader(shaderProgram, shaders[i]);
+		glDeleteShader(shaders[i]);
+	}
 
-	// Validate the program
+	/*** Validate the program ***/
 	glValidateProgram(shaderProgram);
 
 	GLint isValidated = GL_FALSE;
@@ -192,12 +209,18 @@ int display::loadShaders(const char* vertexPath, const char* fragmentPath)
 		std::vector<GLchar> infoLog(maxLength);
 		glGetProgramInfoLog(shaderProgram, maxLength, &maxLength, &infoLog[0]);
 		std::cout << infoLog << std::endl;
+		std::cout << "Could not validate shader program" << std::endl;
 
-		exception = "ERROR: Failed to validate shader program";
-		return 1;
+		glDeleteProgram(shaderProgram);
+		return 0;
 	}
 
-	return 0;
+	return shaderProgram;
+}
+
+void display::useProgram()
+{
+	glUseProgram(shaderProgram);
 }
 
 std::ostream& operator<<(std::ostream& out, const std::vector<GLchar>& v)
@@ -230,6 +253,8 @@ int main(int argc, char *argv[])
 	try
 	{
 		display disObj("opengl", 800, 600);
+		disObj.useProgram();
+		mesh meshObj;
 
 		SDL_Event winEvent;
 		bool quit = false;
@@ -243,6 +268,10 @@ int main(int argc, char *argv[])
 			/*** Drawing ***/
 			glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 			glClear(GL_COLOR_BUFFER_BIT);
+			glDrawArrays(GL_TRIANGLES, 0, 3);
+
+
+
 			disObj.update();
 		}
 	}

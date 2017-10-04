@@ -18,14 +18,14 @@ class display : public std::exception
 		~display();
 		const char* what() const noexcept {return exception.c_str();}
 		void update();
+		void useProgram();
 	private:
 		int readFile(std::string&, const char*);
-		int loadShaders(const char*, const char*);
+		GLuint createShader(GLenum shaderType, const char*); // returns 0 on error
+		GLuint createProgram(GLuint* shaders, size_t numOfShaders); // returns 0 on error
 		std::string exception;
 		SDL_Window *window;
 		SDL_GLContext glcontext;
-		GLuint vertexShader;
-		GLuint fragmentShader;
 		GLuint shaderProgram;
 };
 

@@ -3,10 +3,10 @@
 
 #include <GL/glew.h>
 
-class glObject
+class mesh
 {
 	public:
-		glObject();
+		mesh();
 	private:
 };
 
