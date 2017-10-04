@@ -116,7 +116,7 @@ int display::loadShaders(const char* vertexPath, const char* fragmentPath)
 	glShaderSource(vertexShader, 1, &vertexCodeCstr, 0);
 	glCompileShader(vertexShader);
 
-	GLint isCompiled = 0;
+	GLint isCompiled = GL_FALSE;
 	glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &isCompiled);
 	if(isCompiled == GL_FALSE)
 	{
@@ -161,7 +161,7 @@ int display::loadShaders(const char* vertexPath, const char* fragmentPath)
 	glAttachShader(shaderProgram, fragmentShader);
 	glLinkProgram(shaderProgram);
 
-	GLint isLinked = 0;
+	GLint isLinked = GL_FALSE;
 	glGetProgramiv(shaderProgram, GL_LINK_STATUS, &isLinked);
 	if(isLinked == GL_FALSE)
 	{
