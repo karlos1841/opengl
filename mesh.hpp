@@ -7,6 +7,7 @@ class mesh
 {
 	public:
 		mesh();
+		void draw();
 	private:
 };
 
