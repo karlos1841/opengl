@@ -1,7 +1,7 @@
 #include "main.hpp"
 #include "mesh.hpp"
 
-display::display(const char* title, const int w, const int h) : window(nullptr), glcontext(nullptr), shaderProgram(0)
+display::display(const char* title, const int w, const int h, const std::vector<const char*>& shaderPaths) : window(nullptr), glcontext(nullptr)
 {
 	if(SDL_Init(SDL_INIT_EVERYTHING) != 0)
 	{
@@ -59,16 +59,25 @@ display::display(const char* title, const int w, const int h) : window(nullptr),
 	std::cout << "Vendor: " << glGetString(GL_VENDOR) << std::endl;
 	std::cout << "GL version: " << glGetString(GL_VERSION) << std::endl;
 
-	/*** Create shaders ***/
-	GLuint shaders[2];
-	shaders[0] = createShader(GL_VERTEX_SHADER, "vertex.glsl");
-	shaders[1] = createShader(GL_FRAGMENT_SHADER, "fragment.glsl");
-
-	/*** Link the shaders into program ***/
-	shaderProgram = createProgram(shaders, sizeof(shaders) / sizeof(shaders[0]));
-	if(shaderProgram == 0)
+	/*** Paths to shaders in vector must be even and one after another ***/
+	if(shaderPaths.size() % 2 == 0)
 	{
-		exception = "ERROR: Could not create program";
+		GLuint shaderProgram = 0;
+		for(unsigned int i = 1; i < shaderPaths.size(); i += 2)
+		{
+			/*** Link the shaders into program ***/
+			shaderProgram = createProgram(shaderPaths[i - 1], shaderPaths[i]);
+			if(shaderProgram == 0)
+			{
+				exception = "ERROR: Could not create program";
+				throw *this;
+			}
+			shaderPrograms.push_back(shaderProgram);
+		}
+	}
+	else
+	{
+		exception = "ERROR: Number of paths to shaders must be even";
 		throw *this;
 	}
 }
@@ -76,7 +85,10 @@ display::display(const char* title, const int w, const int h) : window(nullptr),
 display::~display()
 {
 	std::cout << "Cleaning up resources" << std::endl;
-	if(shaderProgram != 0) glDeleteProgram(shaderProgram);
+	for(unsigned int i = 0; i < shaderPrograms.size(); i++)
+	{
+		glDeleteProgram(shaderPrograms[i]);
+	}
 	if(glcontext != nullptr) SDL_GL_DeleteContext(glcontext);
 	if(window != nullptr) SDL_DestroyWindow(window);
 	SDL_Quit();
@@ -107,65 +119,65 @@ int display::readFile(std::string& fileContent, const char* filePath)
 	return 0;
 }
 
-GLuint display::createShader(GLenum shaderType, const char* shaderPath)
+GLuint display::createProgram(const char* vertexShaderPath, const char* fragmentShaderPath)
 {
-	std::string shaderCode;
-	if(readFile(shaderCode, shaderPath) != 0)
+	std::string vertexShaderCode;
+	if(readFile(vertexShaderCode, vertexShaderPath) != 0)
 	{
 		return 0;
 	}
-	const char* shaderCodeCstr = shaderCode.c_str();
+	const GLchar* vertexShaderCodeCstr = vertexShaderCode.c_str();
 
-	GLuint shader = glCreateShader(shaderType);
-	glShaderSource(shader, 1, &shaderCodeCstr, 0);
-	glCompileShader(shader);
+	GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
+	glShaderSource(vertexShader, 1, &vertexShaderCodeCstr, 0);
+	glCompileShader(vertexShader);
 
 	GLint isCompiled = GL_FALSE;
-	glGetShaderiv(shader, GL_COMPILE_STATUS, &isCompiled);
+	glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &isCompiled);
 	if(isCompiled == GL_FALSE)
 	{
 		GLint maxLength = 0;
-		glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &maxLength);
+		glGetShaderiv(vertexShader, GL_INFO_LOG_LENGTH, &maxLength);
 		std::vector<GLchar> infoLog(maxLength);
-		glGetShaderInfoLog(shader, maxLength, &maxLength, &infoLog[0]);
+		glGetShaderInfoLog(vertexShader, maxLength, &maxLength, &infoLog[0]);
 		std::cout << infoLog << std::endl;
-		std::cout << "Failed to compile " << shaderPath << std::endl;
+		std::cout << "Failed to compile " << vertexShaderPath << std::endl;
 
-		glDeleteShader(shader);
+		glDeleteShader(vertexShader);
 		return 0;
 	}
 
-	return shader;
-}
-
-GLuint display::createProgram(GLuint* shaders, size_t numOfShaders)
-{
-	/*** Check if all shaders compiled successfully ***/
-	bool areShadersReady = true;
-	for(size_t i = 0; i < numOfShaders; i++)
+	std::string fragmentShaderCode;
+	if(readFile(fragmentShaderCode, fragmentShaderPath) != 0)
 	{
-		if(shaders[i] == 0)
-		{
-			areShadersReady = false;
-			break;
-		}
+		return 0;
 	}
-	if(areShadersReady == false)
-	{
-		for(size_t i = 0; i < numOfShaders; i++)
-		{
-			glDeleteShader(shaders[i]);
-		}
+	const GLchar* fragmentShaderCodeCstr = fragmentShaderCode.c_str();
 
+	GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+	glShaderSource(fragmentShader, 1, &fragmentShaderCodeCstr, 0);
+	glCompileShader(fragmentShader);
+
+	isCompiled = GL_FALSE;
+	glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &isCompiled);
+	if(isCompiled == GL_FALSE)
+	{
+		GLint maxLength = 0;
+		glGetShaderiv(fragmentShader, GL_INFO_LOG_LENGTH, &maxLength);
+		std::vector<GLchar> infoLog(maxLength);
+		glGetShaderInfoLog(fragmentShader, maxLength, &maxLength, &infoLog[0]);
+		std::cout << infoLog << std::endl;
+		std::cout << "Failed to compile " << fragmentShaderPath << std::endl;
+
+		glDeleteShader(fragmentShader);
+		glDeleteShader(vertexShader);
 		return 0;
 	}
 
 	/*** Create the program and attach shaders ***/
 	GLuint shaderProgram = glCreateProgram();
-	for(size_t i = 0; i < numOfShaders; i++)
-	{
-		glAttachShader(shaderProgram, shaders[i]);
-	}
+	glAttachShader(shaderProgram, vertexShader);
+	glAttachShader(shaderProgram, fragmentShader);
 
 	/*** Link the program ***/
 	glLinkProgram(shaderProgram);
@@ -182,20 +194,17 @@ GLuint display::createProgram(GLuint* shaders, size_t numOfShaders)
 		std::cout << "Could not link shader program" << std::endl;
 
 		glDeleteProgram(shaderProgram);
-		for(size_t i = 0; i < numOfShaders; i++)
-		{
-			glDeleteShader(shaders[i]);
-		}
+		glDeleteShader(fragmentShader);
+		glDeleteShader(vertexShader);
 
 		return 0;
 	}
 
 	/*** Detach and delete shaders after a successful link ***/
-	for(size_t i = 0; i < numOfShaders; i++)
-	{
-		glDetachShader(shaderProgram, shaders[i]);
-		glDeleteShader(shaders[i]);
-	}
+	glDetachShader(shaderProgram, fragmentShader);
+	glDetachShader(shaderProgram, vertexShader);
+	glDeleteShader(fragmentShader);
+	glDeleteShader(vertexShader);
 
 	/*** Validate the program ***/
 	glValidateProgram(shaderProgram);
@@ -218,9 +227,17 @@ GLuint display::createProgram(GLuint* shaders, size_t numOfShaders)
 	return shaderProgram;
 }
 
-void display::useProgram()
+void display::useProgram(unsigned int shaderProgramIndex)
 {
-	glUseProgram(shaderProgram);
+	if(shaderProgramIndex < shaderPrograms.size())
+	{
+		glUseProgram(shaderPrograms[shaderProgramIndex]);
+	}
+	else
+	{
+		exception = "ERROR: No such index in useProgram method";
+		throw *this;
+	}
 }
 
 std::ostream& operator<<(std::ostream& out, const std::vector<GLchar>& v)
@@ -249,11 +266,11 @@ int main(int argc, char *argv[])
 	}
 	std::cout << "Invoking " << name << std::endl;
 
-
 	try
 	{
-		display disObj("opengl", 800, 600);
-		disObj.useProgram();
+		const std::vector<const char*> shaderPaths = {"vertex.glsl", "fragment.glsl"};
+		display disObj("opengl", 800, 600, shaderPaths);
+		disObj.useProgram(0);
 		mesh meshObj;
 
 		SDL_Event winEvent;
