@@ -12,18 +12,17 @@ mesh::mesh()
 
 	const GLfloat vertices1[] = {
 	1.0f, 0.0f, 0.0f,
-	0.5f, -0.5f, 0.0f,
-	0.5f, 0.5f, 0.0f
+	0.0f, -0.5f, 0.0f,
+	0.0f, 0.5f, 0.0f
 	};
 	const GLfloat vertices2[] = {
 	-1.0f, 0.0f, 0.0f,
-	-0.5f, -0.5f, 0.0f,
-	-0.5f, 0.5f, 0.0f
+	0.0f, -0.5f, 0.0f,
+	0.0f, 0.5f, 0.0f
 	};
 
 	const GLuint indices[] = {
-	0, 1, 2,
-	3, 4, 5
+	0, 1, 2
 	};
 
 	/*** Generate vertex array objects ***/
