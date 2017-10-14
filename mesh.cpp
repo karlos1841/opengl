@@ -10,10 +10,11 @@ mesh::mesh()
 	};
 	*/
 
+	/*** vertex and color for each vertex ***/
 	const GLfloat vertices1[] = {
-	1.0f, 0.0f, 0.0f,
-	0.0f, -0.5f, 0.0f,
-	0.0f, 0.5f, 0.0f
+	1.0f, 0.0f, 0.0f,	0.0f, 0.0f, 1.0f,
+	0.0f, -0.5f, 0.0f,	0.0f, 0.0f, 1.0f,
+	0.0f, 0.5f, 0.0f,	0.0f, 0.0f, 1.0f
 	};
 	const GLfloat vertices2[] = {
 	-1.0f, 0.0f, 0.0f,
@@ -52,13 +53,13 @@ mesh::mesh()
 	/*** Copy vertex array indices to the buffer ***/
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
-	/*** How should we interpret data in the buffer ***/
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-
-	/*** Specify the index of the vertex attribute ***/
+	/*** Position attributes ***/
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), 0);
 	glEnableVertexAttribArray(0);
 
+	/*** Color attributes ***/
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (void*)(3 * sizeof(GLfloat)));
+	glEnableVertexAttribArray(1);
 
 
 	glBindVertexArray(VAO[1]);
