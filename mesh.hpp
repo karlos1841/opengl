@@ -8,7 +8,7 @@ class mesh
 {
 	public:
 		mesh();
-		void draw();
+		void draw(const unsigned int);
 	private:
 		std::vector<GLuint> VAO;
 		std::vector<GLuint> VBO;

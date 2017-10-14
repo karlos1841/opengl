@@ -18,7 +18,7 @@ class display : public std::exception
 		~display();
 		const char* what() const noexcept {return exception.c_str();}
 		void update();
-		void useProgram(unsigned int);
+		void useProgram(const unsigned int);
 	private:
 		int readFile(std::string&, const char*);
 		GLuint createProgram(const char*, const char*); // returns 0 on error

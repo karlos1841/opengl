@@ -71,15 +71,9 @@ mesh::mesh()
 	glEnableVertexAttribArray(0);
 }
 
-void mesh::draw()
+void mesh::draw(const unsigned int VAOindex)
 {
-	glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-	glClear(GL_COLOR_BUFFER_BIT);
-
-	glBindVertexArray(VAO[0]);
-	glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, 0);
-	glBindVertexArray(0);
-	glBindVertexArray(VAO[1]);
+	glBindVertexArray(VAO[VAOindex]);
 	glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, 0);
 	glBindVertexArray(0);
 }

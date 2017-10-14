@@ -227,7 +227,7 @@ GLuint display::createProgram(const char* vertexShaderPath, const char* fragment
 	return shaderProgram;
 }
 
-void display::useProgram(unsigned int shaderProgramIndex)
+void display::useProgram(const unsigned int shaderProgramIndex)
 {
 	if(shaderProgramIndex < shaderPrograms.size())
 	{
@@ -268,9 +268,8 @@ int main(int argc, char *argv[])
 
 	try
 	{
-		const std::vector<const char*> shaderPaths = {"vertex.glsl", "fragment.glsl"};
+		const std::vector<const char*> shaderPaths = {"shaders/vertex.glsl", "shaders/fragment.glsl", "shaders/vertex2.glsl", "shaders/fragment2.glsl"};
 		display disObj("opengl", 800, 600, shaderPaths);
-		disObj.useProgram(0);
 		mesh meshObj;
 
 		SDL_Event winEvent;
@@ -283,7 +282,14 @@ int main(int argc, char *argv[])
 			}
 
 			/*** Drawing ***/
-			meshObj.draw();
+			glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+			glClear(GL_COLOR_BUFFER_BIT);
+
+			disObj.useProgram(0);
+			meshObj.draw(0);
+
+			disObj.useProgram(1);
+			meshObj.draw(1);
 
 			disObj.update();
 		}
