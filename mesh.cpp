@@ -10,44 +10,64 @@ mesh::mesh()
 	};
 	*/
 
-	const GLfloat vertices[] = {
-     0.5f,  0.5f, 0.0f,  // top right
-     0.5f, -0.5f, 0.0f,  // bottom right
-    -0.5f, -0.5f, 0.0f,  // bottom left
-    -0.5f,  0.5f, 0.0f   // top left 
+	const GLfloat vertices1[] = {
+	1.0f, 0.0f, 0.0f,
+	0.5f, -0.5f, 0.0f,
+	0.5f, 0.5f, 0.0f
+	};
+	const GLfloat vertices2[] = {
+	-1.0f, 0.0f, 0.0f,
+	-0.5f, -0.5f, 0.0f,
+	-0.5f, 0.5f, 0.0f
 	};
 
-	const GLuint indices[] = {  // note that we start from 0!
-    0, 1, 3,   // first triangle
-    1, 2, 3    // second triangle
+	const GLuint indices[] = {
+	0, 1, 2,
+	3, 4, 5
 	};
 
-	/*** Generate vertex array object ***/
-	GLuint VAO;
-	glGenVertexArrays(1, &VAO);
-
-	/*** Bind vertex array object ***/
-	glBindVertexArray(VAO);
+	/*** Generate vertex array objects ***/
+	VAO.resize(2);
+	glGenVertexArrays(2, &VAO[0]);
 
 	/*** Generate vertex buffer object ***/
-	GLuint VBO;
-	glGenBuffers(1, &VBO);
+	VBO.resize(2);
+	glGenBuffers(2, &VBO[0]);
 
-	/*** Bind the buffer to GL_ARRAY_BUFFER and copy data to the buffer ***/
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
+	/*** Generate element buffer object ***/
 	GLuint EBO;
 	glGenBuffers(1, &EBO);
 
+	/*** Bind vertex array object ***/
+	glBindVertexArray(VAO[0]);
+
+	/*** Bind vertex buffer object ***/
+	glBindBuffer(GL_ARRAY_BUFFER, VBO[0]);
+
+	/*** Copy vertex attributes to the buffer ***/
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices1), vertices1, GL_STATIC_DRAW);
+
+	/*** Bind element buffer object ***/
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+
+	/*** Copy vertex array indices to the buffer ***/
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
 	/*** How should we interpret data in the buffer ***/
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
 	/*** Specify the index of the vertex attribute ***/
+	glEnableVertexAttribArray(0);
+
+
+
+	glBindVertexArray(VAO[1]);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO[1]);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices2), vertices2, GL_STATIC_DRAW);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
 	glEnableVertexAttribArray(0);
 }
 
@@ -55,5 +75,11 @@ void mesh::draw()
 {
 	glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
-	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+	glBindVertexArray(VAO[0]);
+	glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, 0);
+	glBindVertexArray(0);
+	glBindVertexArray(VAO[1]);
+	glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, 0);
+	glBindVertexArray(0);
 }
